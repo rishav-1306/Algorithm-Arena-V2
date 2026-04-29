@@ -89,11 +89,13 @@ const Dashboard = () => {
     },
   ];
 
-  const pendingTasksPreview = [
-    { id: 1, title: 'Sliding Window Maximum', priority: 'High', due: '2h left', category: 'Algorithms' },
-    { id: 2, title: 'Dijkstra Pathfinding', priority: 'Med', due: 'Tomorrow', category: 'Graphs' },
-    { id: 3, title: 'Memory Management', priority: 'Low', due: '3 days', category: 'OS' },
-  ];
+  const pendingTasksPreview = challenges.slice(2, 5).map((ch, index) => ({
+    id: ch._id,
+    title: ch.title,
+    priority: ch.difficulty === 'Hard' ? 'High' : ch.difficulty === 'Medium' ? 'Med' : 'Low',
+    due: ['2h left', 'Tomorrow', '3 days'][index],
+    category: ch.category || 'General',
+  }));
 
   return (
     <div className="space-y-8">

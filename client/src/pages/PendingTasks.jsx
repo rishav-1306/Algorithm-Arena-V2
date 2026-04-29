@@ -2,15 +2,16 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { FiClock, FiPlay } from 'react-icons/fi';
 import PageHeader from '../components/PageHeader';
+import { mockChallenges } from '../lib/mockData';
 
 const PendingTasks = () => {
-  const mockTasks = [
-    { id: 1, title: 'Sliding Window Maximum', priority: 'High', due: '2h left', category: 'Algorithms' },
-    { id: 2, title: 'Dijkstra Pathfinding', priority: 'Med', due: 'Tomorrow', category: 'Graphs' },
-    { id: 3, title: 'Memory Management', priority: 'Low', due: '3 days', category: 'OS' },
-    { id: 4, title: 'Network Routing', priority: 'High', due: '5h left', category: 'Networking' },
-    { id: 5, title: 'Database Indexing', priority: 'Med', due: '2 days', category: 'Databases' },
-  ];
+  const mockTasks = mockChallenges.slice(0, 5).map((ch, index) => ({
+    id: ch._id,
+    title: ch.title,
+    priority: ch.difficulty === 'Hard' ? 'High' : ch.difficulty === 'Medium' ? 'Med' : 'Low',
+    due: ['2h left', 'Tomorrow', '3 days', '5h left', '2 days'][index],
+    category: ch.category || 'General',
+  }));
 
   return (
     <div className="space-y-8">
