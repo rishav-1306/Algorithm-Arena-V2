@@ -18,18 +18,11 @@ import {
   FiXCircle,
   FiMessageSquare,
   FiUser,
+  FiPlay,
 } from "react-icons/fi";
 
-// CodeMirror Imports
-import CodeMirror from "@uiw/react-codemirror";
-import { javascript } from "@codemirror/lang-javascript";
-import { python } from "@codemirror/lang-python";
-import { java } from "@codemirror/lang-java";
-import { cpp } from "@codemirror/lang-cpp";
-import { EditorView } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
+import CodeEditor from "../components/CodeEditor";
+import { LANGUAGE_MAP, LANGUAGE_OPTIONS } from "../constants/languages";
 
 // Local Project Imports
 import SkeletonCard from "../components/SkeletonCard";
@@ -37,80 +30,36 @@ import { api } from "../lib/api";
 import { USE_MOCK, mockChallenges, mockSubmissions } from "../lib/mockData";
 import { useAuth } from "../context/useAuth";
 
-// --- THEME & HIGHLIGHT DEFINITIONS ---
+// ─── Judge0 CE (free, no API key) ────────────────────────────────────────────
+const JUDGE0_URL =
+  import.meta.env.VITE_JUDGE0_API_URL || "https://ce.judge0.com";
 
-const algoArenaDarkHighlight = HighlightStyle.define([
-  { tag: t.keyword, color: "#bd93f9", fontWeight: "bold" },
-  { tag: t.string, color: "#ff6090" },
-  { tag: t.variableName, color: "#8be9fd" },
-  { tag: t.definition(t.variableName), color: "#f1fa8c" },
-  { tag: t.function(t.variableName), color: "#50fa7b" },
-  { tag: t.comment, color: "#6272a4", fontStyle: "italic" },
-  { tag: t.number, color: "#ffb86c" },
-  { tag: t.operator, color: "#44adff" },
-]);
-
-const arenaDarkTheme = EditorView.theme(
-  {
-    "&": { color: "white", backgroundColor: "transparent !important" },
-    ".cm-content": {
-      caretColor: "#ff6090",
-      fontFamily: "'Fira Code', 'JetBrains Mono', monospace",
-    },
-    ".cm-gutters": {
-      backgroundColor: "transparent",
-      color: "#4b5563",
-      border: "none",
-    },
-    "&.cm-focused .cm-cursor": { borderLeftColor: "#ff6090" },
-    "&.cm-focused .cm-selectionBackground, ::selection": {
-      backgroundColor: "#ffffff1a",
-    },
-  },
-  { dark: true },
-);
-
-const algoArenaLightHighlight = HighlightStyle.define([
-  { tag: t.keyword, color: "#d73a49", fontWeight: "bold" },
-  { tag: t.string, color: "#005cc5" },
-  { tag: t.variableName, color: "#24292e" },
-  { tag: t.function(t.variableName), color: "#6f42c1" },
-  { tag: t.comment, color: "#6a737d", fontStyle: "italic" },
-  { tag: t.number, color: "#e36209" },
-  { tag: t.operator, color: "#005cc5" },
-]);
-
-const arenaLightTheme = EditorView.theme(
-  {
-    "&": { color: "#24292e", backgroundColor: "white !important" },
-    ".cm-gutters": {
-      backgroundColor: "#f6f8fa",
-      color: "#afb8c1",
-      borderRight: "1px solid #d0d7de",
-    },
-    ".cm-activeLine": { backgroundColor: "#f6f8fa" },
-    "&.cm-focused .cm-selectionBackground, ::selection": {
-      backgroundColor: "#add6ff",
-    },
-  },
-  { dark: false },
-);
-
-// Fallback starters for challenges without LeetCode snippets
-const defaultStarterByLanguage = {
-  javascript:
-    "function solve(input) {\n  // TODO: implement\n  return input;\n}\n",
-  python: "def solve(data):\n    # TODO: implement\n    return data\n",
-  java: "class Solution {\n    public static void solve() {\n        // TODO: implement\n    }\n}\n",
-  cpp: "#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    // TODO: implement\n    return 0;\n}\n",
+const b64Encode = (str) =>
+  btoa(
+    encodeURIComponent(str).replace(/%([0-9A-F]{2})/gi, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    ),
+  );
+const b64Decode = (str) => {
+  if (!str) return "";
+  try {
+    return decodeURIComponent(
+      atob(str)
+        .split("")
+        .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+        .join(""),
+    );
+  } catch {
+    return str;
+  }
 };
 
-// Map LeetCode langSlugs to our editor language keys
-const langSlugToEditorLang = {
-  javascript: "javascript",
-  python3: "python",
-  java: "java",
-  cpp: "cpp",
+const defaultStarterByLanguage = {
+  javascript: `function main() {\n\n}\n\nmain();\n`,
+  python: `def main():\n    pass\n\nif __name__ == "__main__":\n    main()\n`,
+  java: `public class Main {\n\n    public static void main(String[] args) {\n\n    }\n}\n`,
+  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n\n    return 0;\n}\n`,
+  c: `#include <stdio.h>\n\nint main() {\n\n    return 0;\n}\n`,
 };
 
 const ChallengeDetails = () => {
@@ -130,6 +79,12 @@ const ChallengeDetails = () => {
   const [language, setLanguage] = useState("javascript");
   const [submitting, setSubmitting] = useState(false);
   const [leftTab, setLeftTab] = useState("description");
+
+  // Input / Output panel state
+  const [bottomTab, setBottomTab] = useState("input");
+  const [stdin, setStdin] = useState("");
+  const [runOutput, setRunOutput] = useState(null);
+  const [running, setRunning] = useState(false);
 
   // Review mode state
   const [reviewComment, setReviewComment] = useState("");
@@ -154,7 +109,8 @@ const ChallengeDetails = () => {
     return () => observer.disconnect();
   }, []);
 
-  const codeSnippet = codeByLang[language] || "";
+  const codeSnippet =
+    codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
   const setCodeSnippet = (val) => {
     const newVal =
       typeof val === "function" ? val(codeByLang[language] || "") : val;
@@ -189,24 +145,6 @@ const ChallengeDetails = () => {
     );
   }, [draftKey, repoUrl, codeByLang, language]);
 
-  // Logic: Editor Extensions
-  const editorExtensions = useMemo(() => {
-    const langExt = {
-      javascript: [javascript({ jsx: true })],
-      python: [python()],
-      java: [java()],
-      cpp: [cpp()],
-    }[language] || [javascript()];
-
-    const themeExt = isDark
-      ? [arenaDarkTheme, syntaxHighlighting(algoArenaDarkHighlight)]
-      : [arenaLightTheme, syntaxHighlighting(algoArenaLightHighlight)];
-
-    const readOnlyExt = isReviewMode ? [EditorState.readOnly.of(true)] : [];
-
-    return [...langExt, ...themeExt, ...readOnlyExt];
-  }, [language, isDark, isReviewMode]);
-
   const challengeQuery = useQuery({
     queryKey: ["challenge", id],
     queryFn: async () => {
@@ -220,25 +158,6 @@ const ChallengeDetails = () => {
     },
   });
 
-  // Logic: Populate editor with starter snippets from DB
-  useEffect(() => {
-    if (!challengeQuery.data) return;
-    // Don't overwrite if user already has a draft saved
-    const hasDraft = localStorage.getItem(draftKey);
-    if (hasDraft) return;
-
-    const challenge = challengeQuery.data;
-    if (challenge.codeSnippets && challenge.codeSnippets.length > 0) {
-      const snippetMap = {};
-      challenge.codeSnippets.forEach((s) => {
-        const editorLang = langSlugToEditorLang[s.langSlug];
-        if (editorLang && !snippetMap[editorLang]) {
-          snippetMap[editorLang] = s.code;
-        }
-      });
-      setCodeByLang(snippetMap);
-    }
-  }, [challengeQuery.data, draftKey]);
 
   const historyQuery = useQuery({
     queryKey: ["my-submissions", id],
@@ -301,17 +220,8 @@ const ChallengeDetails = () => {
     [codeSnippet],
   );
 
-  // Build starter code from DB snippets or fall back to defaults
-  const getStarterCode = () => {
-    const challenge = challengeQuery.data;
-    if (challenge?.codeSnippets?.length > 0) {
-      const match = challenge.codeSnippets.find(
-        (s) => langSlugToEditorLang[s.langSlug] === language,
-      );
-      if (match) return match.code;
-    }
-    return defaultStarterByLanguage[language] || defaultStarterByLanguage.javascript;
-  };
+  const getStarterCode = () =>
+    defaultStarterByLanguage[language] ?? defaultStarterByLanguage.javascript;
 
   const handleInsertStarter = () => setCodeSnippet(getStarterCode());
 
@@ -332,9 +242,53 @@ const ChallengeDetails = () => {
     toast.success("Draft cleared");
   };
 
+  // ─── Judge0 run (CE free instance – wait=true, no API key) ──────────────────
+
+  const handleRun = async () => {
+    if (!codeSnippet.trim()) return toast.error("No code to run.");
+    setRunning(true);
+    setBottomTab("output");
+    setRunOutput(null);
+    try {
+      const res = await fetch(
+        `${JUDGE0_URL}/submissions?wait=true&base64_encoded=true`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            language_id: LANGUAGE_MAP[language]?.id ?? 63,
+            source_code: b64Encode(codeSnippet),
+            stdin: b64Encode(stdin),
+          }),
+        },
+      );
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Judge0 error ${res.status}: ${text}`);
+      }
+
+      const result = await res.json();
+
+      setRunOutput({
+        stdout: b64Decode(result.stdout),
+        stderr: b64Decode(result.stderr),
+        compile_output: b64Decode(result.compile_output),
+        status: result.status,
+        time: result.time,
+        memory: result.memory,
+      });
+    } catch (err) {
+      toast.error(err.message || "Failed to reach Judge0.");
+      setRunOutput({ error: err.message || "Execution engine unreachable." });
+    } finally {
+      setRunning(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!repoUrl && !codeSnippet.trim())
-      return toast.error("Please provide code or a GitHub link.");
+    if (!codeSnippet.trim() && !repoUrl.trim())
+      return toast.error("Please write some code or add a GitHub link.");
     setSubmitting(true);
     try {
       if (USE_MOCK) {
@@ -342,18 +296,18 @@ const ChallengeDetails = () => {
       } else {
         await api.post("/api/submissions", {
           challengeId: id,
-          repositoryUrl: repoUrl.trim() || undefined,
           code: codeSnippet.trim() || undefined,
           language,
+          repositoryUrl: repoUrl.trim() || undefined,
         });
       }
-      toast.success("Solution submitted.");
+      toast.success("Solution submitted successfully.");
       setRepoUrl("");
       setCodeByLang({});
       localStorage.removeItem(draftKey);
       queryClient.invalidateQueries({ queryKey: ["my-submissions", id] });
     } catch (err) {
-      toast.error(err.userMessage || "Submission failed.");
+      toast.error(err.response?.data?.message || err.userMessage || "Submission failed.");
     } finally {
       setSubmitting(false);
     }
@@ -541,30 +495,93 @@ const ChallengeDetails = () => {
               value={language}
               onChange={(e) => setLanguage(e.target.value)}
             >
-              <option value="javascript">JavaScript</option>
-              <option value="python">Python</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
+              {LANGUAGE_OPTIONS.map(({ key, label }) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
             </select>
           </div>
 
-          {/* CodeMirror Instance */}
-          <div className="flex-1 min-h-0 overflow-hidden bg-black/10">
-            <CodeMirror
+          {/* Monaco Editor Instance */}
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <CodeEditor
               value={codeSnippet}
-              height="100%"
-              extensions={editorExtensions}
-              onChange={isReviewMode ? undefined : (value) => setCodeSnippet(value)}
-              editable={!isReviewMode}
-              className="text-sm h-full"
-              basicSetup={{
-                lineNumbers: true,
-                bracketMatching: true,
-                closeBrackets: true,
-                autocompletion: false,
-              }}
+              onChange={(value) => setCodeSnippet(value ?? "")}
+              language={LANGUAGE_MAP[language]?.monacoLang ?? language}
+              isDark={isDark}
+              readOnly={isReviewMode}
             />
           </div>
+
+          {/* ── Test / Result Panel (normal mode only) ── */}
+          {!isReviewMode && (
+            <div className="h-44 flex flex-col border-t border-black/10 dark:border-white/10 shrink-0">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-3 py-1.5 border-b border-black/10 dark:border-white/10 shrink-0">
+                <div className="flex gap-0.5">
+                  {[
+                    { key: "input", label: "Test" },
+                    { key: "output", label: "Result" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setBottomTab(key)}
+                      className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                        bottomTab === key
+                          ? "bg-accent/15 text-accent"
+                          : "text-secondary hover:text-primary"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={handleRun}
+                  disabled={running}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-green-500/15 text-green-400 text-xs font-bold hover:bg-green-500/25 transition-all disabled:opacity-60 border border-green-500/20"
+                >
+                  {running ? (
+                    <FiRefreshCw size={11} className="animate-spin" />
+                  ) : (
+                    <FiPlay size={11} />
+                  )}
+                  {running ? "Running…" : "Run"}
+                </button>
+              </div>
+
+              {/* Panel body */}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                {bottomTab === "input" ? (
+                  <textarea
+                    className="w-full h-full resize-none bg-transparent px-3 py-2 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                    placeholder="Enter stdin input here…"
+                    value={stdin}
+                    onChange={(e) => setStdin(e.target.value)}
+                    spellCheck={false}
+                  />
+                ) : (
+                  <div className="h-full overflow-y-auto px-3 py-2">
+                    {!runOutput ? (
+                      <p className="text-secondary/40 text-xs font-mono">
+                        Press Run to see output here…
+                      </p>
+                    ) : runOutput.error ? (
+                      <pre className="text-red-400 text-xs font-mono whitespace-pre-wrap">
+                        {runOutput.error}
+                      </pre>
+                    ) : (
+                      <pre className="text-xs font-mono text-primary whitespace-pre-wrap break-all">
+                        {runOutput.stdout ||
+                          runOutput.compile_output ||
+                          runOutput.stderr ||
+                          "(no output)"}
+                      </pre>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {isReviewMode ? (
             /* ---- REVIEW MODE PANEL ---- */
@@ -656,49 +673,54 @@ const ChallengeDetails = () => {
             </div>
           ) : (
             /* ---- NORMAL SUBMIT PANEL ---- */
-            <>
-              <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3 bg-black/1">
-                <div className="flex items-center justify-between text-[11px] text-secondary">
-                  <span>
-                    {codeStats.lines} lines • {codeStats.characters} chars
-                  </span>
-                  <div className="flex gap-2">
-                    <button onClick={handleInsertStarter}>
-                      <FiRefreshCw />
-                    </button>
-                    <button onClick={handleCopyCode}>
-                      <FiClipboard />
-                    </button>
-                    <button onClick={handleClearDraft}>
-                      <FiTrash2 />
-                    </button>
-                  </div>
-                </div>
-              </div>
-              <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3">
+            <div className="px-4 py-3 border-t border-black/10 dark:border-white/10 shrink-0 space-y-3">
+
+              {/* Row: language badge + stats + editor action icons */}
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 flex-1 focus-within:border-accent transition-colors">
-                    <FiGithub size={14} className="text-secondary shrink-0" />
-                    <input
-                      name="submissionRepositoryUrl"
-                      type="text"
-                      placeholder="GitHub repository URL (optional)"
-                      className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"
-                      value={repoUrl}
-                      onChange={(e) => setRepoUrl(e.target.value)}
-                    />
-                  </div>
+                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-accent/10 text-accent border border-accent/20">
+                    {LANGUAGE_OPTIONS.find((l) => l.key === language)?.label ?? language}
+                  </span>
+                  <span className="text-[11px] text-secondary">
+                    {codeStats.lines} lines · {codeStats.characters} chars
+                  </span>
                 </div>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  <FiSend size={14} />{" "}
-                  {submitting ? "Transmitting..." : "Submit Solution"}
-                </button>
+                <div className="flex gap-3 text-secondary">
+                  <button title="Reset to starter" onClick={handleInsertStarter} className="hover:text-primary transition-colors">
+                    <FiRefreshCw size={13} />
+                  </button>
+                  <button title="Copy code" onClick={handleCopyCode} className="hover:text-primary transition-colors">
+                    <FiClipboard size={13} />
+                  </button>
+                  <button title="Clear draft" onClick={handleClearDraft} className="hover:text-primary transition-colors">
+                    <FiTrash2 size={13} />
+                  </button>
+                </div>
               </div>
-            </>
+
+              {/* GitHub repo URL (optional) */}
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-black/5 dark:bg-white/5 border border-black/10 dark:border-white/10 focus-within:border-accent transition-colors">
+                <FiGithub size={14} className="text-secondary shrink-0" />
+                <input
+                  name="submissionRepositoryUrl"
+                  type="url"
+                  placeholder="GitHub repository URL (optional)"
+                  className="bg-transparent text-sm text-primary placeholder-white/25 focus:outline-none w-full"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                />
+              </div>
+
+              {/* Submit button */}
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="btn-primary w-full py-3 flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <FiSend size={14} />
+                {submitting ? "Submitting…" : "Submit Solution"}
+              </button>
+            </div>
           )}
         </div>
       </div>
