@@ -12,6 +12,12 @@ const codeSnippetSchema = z.object({
   code: z.string(),
 });
 
+const testCaseSchema = z.object({
+  label: z.string(),
+  args: z.any(),
+  expected: z.string(),
+});
+
 const challengeCreateSchema = {
   body: z.object({
     title: z.string().trim().min(3).max(200),
@@ -22,6 +28,8 @@ const challengeCreateSchema = {
     category: z.string().trim().min(2).max(80).default("Logic"),
     tags: z.array(z.string().trim()).optional().default([]),
     codeSnippets: z.array(codeSnippetSchema).optional().default([]),
+    functionName: z.string().trim().optional().default(""),
+    testCases: z.array(testCaseSchema).optional().default([]),
   }),
 };
 
@@ -42,6 +50,8 @@ const challengeUpdateSchema = {
       category: z.string().trim().min(2).max(80).optional(),
       tags: z.array(z.string().trim()).optional(),
       codeSnippets: z.array(codeSnippetSchema).optional(),
+      functionName: z.string().trim().optional(),
+      testCases: z.array(testCaseSchema).optional(),
     })
     .refine(
       (obj) => Object.keys(obj).length > 0,

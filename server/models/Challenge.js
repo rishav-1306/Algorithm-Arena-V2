@@ -19,6 +19,13 @@ const challengeSchema = new mongoose.Schema({
     code: { type: String },
     _id: false,
   }],
+  functionName: { type: String, default: '' },
+  testCases: [{
+    label: { type: String },
+    args: { type: mongoose.Schema.Types.Mixed },
+    expected: { type: String },
+    _id: false,
+  }],
   createdAt: { type: Date, default: Date.now }
 });
 

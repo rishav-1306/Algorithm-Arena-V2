@@ -54,12 +54,13 @@ const b64Decode = (str) => {
   }
 };
 
+// Default full-program stubs (used when challenge has no codeSnippets stored).
 const defaultStarterByLanguage = {
-  javascript: `function main() {\n\n}\n\nmain();\n`,
-  python: `def main():\n    pass\n\nif __name__ == "__main__":\n    main()\n`,
-  java: `public class Main {\n\n    public static void main(String[] args) {\n\n    }\n}\n`,
-  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n\n    return 0;\n}\n`,
-  c: `#include <stdio.h>\n\nint main() {\n\n    return 0;\n}\n`,
+  javascript: `function solution() {\n    // read input, compute, print output\n}\n\nsolution();\n`,
+  python: `import sys\ninput = sys.stdin.readline\n\ndef solution():\n    pass\n\nsolution()\n`,
+  java: `import java.util.*;\nimport java.util.stream.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        \n    }\n}\n`,
+  cpp: `#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    ios_base::sync_with_stdio(false);\n    cin.tie(NULL);\n    \n    return 0;\n}\n`,
+  c: `#include <stdio.h>\n#include <stdlib.h>\n\nint main() {\n    \n    return 0;\n}\n`,
 };
 
 const ChallengeDetails = () => {
@@ -83,6 +84,7 @@ const ChallengeDetails = () => {
   // Input / Output panel state
   const [bottomTab, setBottomTab] = useState("input");
   const [stdin, setStdin] = useState("");
+  const [selectedCaseIdx, setSelectedCaseIdx] = useState(0);
   const [runOutput, setRunOutput] = useState(null);
   const [running, setRunning] = useState(false);
 
@@ -109,8 +111,6 @@ const ChallengeDetails = () => {
     return () => observer.disconnect();
   }, []);
 
-  const codeSnippet =
-    codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
   const setCodeSnippet = (val) => {
     const newVal =
       typeof val === "function" ? val(codeByLang[language] || "") : val;
@@ -182,6 +182,9 @@ const ChallengeDetails = () => {
     },
   });
 
+  // Prefer user's saved edits, then the generic full-program template.
+  const codeSnippet = codeByLang[language] ?? defaultStarterByLanguage[language] ?? "";
+
   // Pre-load submitted code into editor when in review mode
   useEffect(() => {
     if (!isReviewMode || !reviewQuery.data) return;
@@ -220,10 +223,8 @@ const ChallengeDetails = () => {
     [codeSnippet],
   );
 
-  const getStarterCode = () =>
-    defaultStarterByLanguage[language] ?? defaultStarterByLanguage.javascript;
-
-  const handleInsertStarter = () => setCodeSnippet(getStarterCode());
+  const handleInsertStarter = () =>
+    setCodeSnippet(defaultStarterByLanguage[language] ?? defaultStarterByLanguage.javascript);
 
   const handleCopyCode = async () => {
     if (!codeSnippet.trim()) return toast.error("No code to copy");
@@ -246,38 +247,57 @@ const ChallengeDetails = () => {
 
   const handleRun = async () => {
     if (!codeSnippet.trim()) return toast.error("No code to run.");
+
+    const testCases = challengeQuery.data?.testCases ?? [];
+
+    // Build the list of runs: one per stored test case, or fall back to
+    // the current manual stdin if no test cases are defined.
+    const runs =
+      testCases.length > 0
+        ? testCases.map((tc) => ({
+            label: tc.label,
+            stdinValue: tc.args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join("\n"),
+            expected: tc.expected ?? null,
+          }))
+        : [{ label: "Run", stdinValue: stdin, expected: null }];
+
     setRunning(true);
     setBottomTab("output");
     setRunOutput(null);
+
     try {
-      const res = await fetch(
-        `${JUDGE0_URL}/submissions?wait=true&base64_encoded=true`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            language_id: LANGUAGE_MAP[language]?.id ?? 63,
-            source_code: b64Encode(codeSnippet),
-            stdin: b64Encode(stdin),
-          }),
-        },
-      );
+      const runOne = async ({ label, stdinValue, expected }) => {
+        const res = await fetch(
+          `${JUDGE0_URL}/submissions?wait=true&base64_encoded=true`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              language_id: LANGUAGE_MAP[language]?.id ?? 63,
+              source_code: b64Encode(codeSnippet),
+              stdin: b64Encode(stdinValue),
+            }),
+          },
+        );
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Judge0 error ${res.status}: ${text}`);
+        }
+        const result = await res.json();
+        return {
+          label,
+          expected,
+          stdout: b64Decode(result.stdout),
+          stderr: b64Decode(result.stderr),
+          compile_output: b64Decode(result.compile_output),
+          status: result.status,
+          time: result.time,
+          memory: result.memory,
+        };
+      };
 
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Judge0 error ${res.status}: ${text}`);
-      }
-
-      const result = await res.json();
-
-      setRunOutput({
-        stdout: b64Decode(result.stdout),
-        stderr: b64Decode(result.stderr),
-        compile_output: b64Decode(result.compile_output),
-        status: result.status,
-        time: result.time,
-        memory: result.memory,
-      });
+      const results = await Promise.all(runs.map(runOne));
+      setRunOutput({ cases: results });
     } catch (err) {
       toast.error(err.message || "Failed to reach Judge0.");
       setRunOutput({ error: err.message || "Execution engine unreachable." });
@@ -552,15 +572,48 @@ const ChallengeDetails = () => {
               {/* Panel body */}
               <div className="flex-1 min-h-0 overflow-hidden">
                 {bottomTab === "input" ? (
-                  <textarea
-                    className="w-full h-full resize-none bg-transparent px-3 py-2 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
-                    placeholder="Enter stdin input here…"
-                    value={stdin}
-                    onChange={(e) => setStdin(e.target.value)}
-                    spellCheck={false}
-                  />
+                  /* ── Test tab ── */
+                  <div className="h-full flex flex-col px-3 py-2 gap-2">
+                    {challenge.testCases?.length > 0 && (
+                      <>
+                        {/* Case selector — clicking one sets stdin to that case's args */}
+                        <div className="flex gap-1 flex-wrap shrink-0">
+                          {challenge.testCases.map((tc, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setSelectedCaseIdx(i);
+                                setStdin(tc.args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join("\n"));
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded-md font-semibold transition-colors ${
+                                selectedCaseIdx === i
+                                  ? "bg-accent/20 text-accent"
+                                  : "text-secondary hover:text-primary bg-black/5 dark:bg-white/5"
+                              }`}
+                            >
+                              {tc.label}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Stdin — editable, pre-filled when a case is selected */}
+                    <textarea
+                      className="flex-1 resize-none bg-black/5 dark:bg-white/5 rounded-md px-2 py-1.5 text-xs font-mono text-primary placeholder:text-secondary/40 focus:outline-none"
+                      placeholder={
+                        challenge.testCases?.length > 0
+                          ? "Select a case above or type stdin manually…"
+                          : "Enter stdin input here…"
+                      }
+                      value={stdin}
+                      onChange={(e) => setStdin(e.target.value)}
+                      spellCheck={false}
+                    />
+                  </div>
                 ) : (
-                  <div className="h-full overflow-y-auto px-3 py-2">
+                  /* ── Result tab ── */
+                  <div className="h-full overflow-y-auto px-3 py-2 space-y-2">
                     {!runOutput ? (
                       <p className="text-secondary/40 text-xs font-mono">
                         Press Run to see output here…
@@ -570,12 +623,81 @@ const ChallengeDetails = () => {
                         {runOutput.error}
                       </pre>
                     ) : (
-                      <pre className="text-xs font-mono text-primary whitespace-pre-wrap break-all">
-                        {runOutput.stdout ||
-                          runOutput.compile_output ||
-                          runOutput.stderr ||
-                          "(no output)"}
-                      </pre>
+                      <div className="space-y-3">
+                        {runOutput.cases.map((c, i) => {
+                          const hasError = c.compile_output || c.stderr;
+                          const passed =
+                            !hasError &&
+                            c.expected != null &&
+                            c.stdout?.trim() === c.expected.trim();
+                          const failed =
+                            !hasError &&
+                            c.expected != null &&
+                            c.stdout?.trim() !== c.expected.trim();
+                          return (
+                            <div
+                              key={i}
+                              className={`rounded-lg border px-3 py-2 space-y-2 ${
+                                hasError
+                                  ? "border-red-500/30 bg-red-500/5"
+                                  : passed
+                                    ? "border-green-500/30 bg-green-500/5"
+                                    : failed
+                                      ? "border-red-500/20 bg-black/5 dark:bg-white/5"
+                                      : "border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5"
+                              }`}
+                            >
+                              {/* Case header */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold text-primary">{c.label}</span>
+                                {hasError ? (
+                                  <span className="text-[10px] font-bold text-red-400">
+                                    {c.compile_output ? "Compile Error" : "Runtime Error"}
+                                  </span>
+                                ) : passed ? (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-green-400">
+                                    <FiCheck size={10} /> Passed
+                                  </span>
+                                ) : failed ? (
+                                  <span className="flex items-center gap-1 text-[10px] font-bold text-red-400">
+                                    <FiXCircle size={10} /> Wrong Answer
+                                  </span>
+                                ) : null}
+                              </div>
+
+                              {/* Error body */}
+                              {hasError && (
+                                <pre className="text-[11px] font-mono text-red-400 whitespace-pre-wrap break-all">
+                                  {c.compile_output || c.stderr}
+                                </pre>
+                              )}
+
+                              {/* Output */}
+                              {!hasError && (
+                                <>
+                                  <div>
+                                    <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Output</p>
+                                    <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                                      {c.stdout || "(no output)"}
+                                    </pre>
+                                  </div>
+                                  {c.expected != null && (
+                                    <div>
+                                      <p className="text-[10px] text-secondary uppercase tracking-wider mb-0.5">Expected</p>
+                                      <pre className="text-xs font-mono bg-black/10 dark:bg-white/10 rounded px-2 py-1 text-primary whitespace-pre-wrap break-all">
+                                        {c.expected}
+                                      </pre>
+                                    </div>
+                                  )}
+                                  {c.time && (
+                                    <p className="text-[10px] text-secondary font-mono">{c.time}s · {c.memory} KB</p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 )}

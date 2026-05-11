@@ -32,7 +32,22 @@ const defaultChallengeForm = {
   category: "Logic",
   tags: [],
   codeSnippets: [],
+  functionName: "",
+  // testCases: args is stored as a JSON string while editing, parsed on submit
+  testCases: [],
 };
+
+// Prepare test cases for the API: parse the `args` string to a real array
+const prepareTestCases = (rawCases) =>
+  rawCases
+    .filter((tc) => tc.label.trim())
+    .map((tc) => {
+      let args = [];
+      try { args = JSON.parse(tc.args); } catch { /* keep empty */ }
+      return { label: tc.label, args, expected: tc.expected };
+    });
+
+const emptyTestCase = () => ({ label: "", args: "[]", expected: "" });
 
 const AdminPanel = () => {
   const [leetcodeInput, setLeetcodeInput] = useState("");
@@ -53,20 +68,26 @@ const AdminPanel = () => {
       const res = await api.get(
         `/api/challenges/fetch-leetcode-details?slug=${slug}`,
       );
-      const { title, content, difficulty, topicTags, codeSnippets } =
+      const { title, content, difficulty, topicTags, codeSnippets, functionName, testCases } =
         res.data.data;
 
       const tags = (topicTags || []).map((t) => t.name);
 
       setCreateForm((prev) => ({
         ...prev,
-        title: title,
+        title,
         description: content,
-        difficulty: difficulty,
+        difficulty,
         category: tags[0] || prev.category,
         link: `https://leetcode.com/problems/${slug}/`,
         tags,
         codeSnippets: codeSnippets || [],
+        functionName: functionName || prev.functionName,
+        // Convert args arrays to JSON strings for the editable form fields
+        testCases: (testCases || []).map((tc) => ({
+          ...tc,
+          args: JSON.stringify(tc.args),
+        })),
       }));
 
       if (codeSnippets?.length) {
@@ -288,7 +309,10 @@ const AdminPanel = () => {
       if (USE_MOCK) {
         await mockDelay();
       } else {
-        await api.post("/api/challenges", createForm);
+        await api.post("/api/challenges", {
+          ...createForm,
+          testCases: prepareTestCases(createForm.testCases),
+        });
       }
       toast.success("Challenge created");
       setCreateForm(defaultChallengeForm);
@@ -311,6 +335,8 @@ const AdminPanel = () => {
           difficulty: editingChallenge.difficulty,
           points: Number(editingChallenge.points),
           category: editingChallenge.category,
+          functionName: editingChallenge.functionName || "",
+          testCases: prepareTestCases(editingChallenge.testCases || []),
         });
       }
       toast.success("Challenge updated");
@@ -692,6 +718,112 @@ const AdminPanel = () => {
                 </div>
               )}
 
+              {/* Function Name */}
+              <div>
+                <label className="field-label">Solution Function Name</label>
+                <input
+                  name="createFunctionName"
+                  className="field-input font-mono"
+                  placeholder="e.g. twoSum"
+                  value={createForm.functionName}
+                  onChange={(e) =>
+                    setCreateForm((p) => ({ ...p, functionName: e.target.value.trim() }))
+                  }
+                />
+                <p className="text-[11px] text-secondary mt-1">
+                  Used to auto-call the function when running JS / Python.
+                </p>
+              </div>
+
+              {/* Test Cases Editor */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="field-label mb-0">Test Cases</label>
+                  <button
+                    type="button"
+                    className="text-xs text-accent hover:underline"
+                    onClick={() =>
+                      setCreateForm((p) => ({
+                        ...p,
+                        testCases: [...p.testCases, emptyTestCase()],
+                      }))
+                    }
+                  >
+                    + Add Case
+                  </button>
+                </div>
+                {createForm.testCases.length === 0 ? (
+                  <p className="text-[11px] text-secondary">No test cases yet — click Add Case.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {createForm.testCases.map((tc, i) => (
+                      <div
+                        key={i}
+                        className="grid grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-black/5 dark:bg-white/5 rounded-xl p-3"
+                      >
+                        <div>
+                          <p className="text-[10px] text-secondary mb-1">Label</p>
+                          <input
+                            className="field-input text-xs py-1"
+                            placeholder="Example 1"
+                            value={tc.label}
+                            onChange={(e) =>
+                              setCreateForm((p) => {
+                                const t = [...p.testCases];
+                                t[i] = { ...t[i], label: e.target.value };
+                                return { ...p, testCases: t };
+                              })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-secondary mb-1">Args (JSON array)</p>
+                          <input
+                            className="field-input text-xs py-1 font-mono"
+                            placeholder='[[2,7,11,15], 9]'
+                            value={tc.args}
+                            onChange={(e) =>
+                              setCreateForm((p) => {
+                                const t = [...p.testCases];
+                                t[i] = { ...t[i], args: e.target.value };
+                                return { ...p, testCases: t };
+                              })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-secondary mb-1">Expected</p>
+                          <input
+                            className="field-input text-xs py-1 font-mono"
+                            placeholder='[0,1]'
+                            value={tc.expected}
+                            onChange={(e) =>
+                              setCreateForm((p) => {
+                                const t = [...p.testCases];
+                                t[i] = { ...t[i], expected: e.target.value };
+                                return { ...p, testCases: t };
+                              })
+                            }
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="mt-5 text-secondary hover:text-red-400 transition-colors"
+                          onClick={() =>
+                            setCreateForm((p) => ({
+                              ...p,
+                              testCases: p.testCases.filter((_, j) => j !== i),
+                            }))
+                          }
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end pt-4">
                 <button type="submit" className="btn-primary">
                   Create Challenge
@@ -1040,7 +1172,15 @@ const AdminPanel = () => {
                   <div className="flex gap-2">
                     <button
                       className="btn-secondary"
-                      onClick={() => setEditingChallenge({ ...challenge })}
+                      onClick={() =>
+                        setEditingChallenge({
+                          ...challenge,
+                          testCases: (challenge.testCases || []).map((tc) => ({
+                            ...tc,
+                            args: JSON.stringify(tc.args ?? []),
+                          })),
+                        })
+                      }
                     >
                       Edit
                     </button>
@@ -1643,6 +1783,109 @@ const AdminPanel = () => {
                 }
               />
             </div>
+            {/* Function Name */}
+            <div>
+              <label className="field-label">Solution Function Name</label>
+              <input
+                name="editFunctionName"
+                className="field-input font-mono"
+                placeholder="e.g. twoSum"
+                value={editingChallenge.functionName || ""}
+                onChange={(e) =>
+                  setEditingChallenge((p) => ({ ...p, functionName: e.target.value.trim() }))
+                }
+              />
+            </div>
+
+            {/* Test Cases Editor */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="field-label mb-0">Test Cases</label>
+                <button
+                  type="button"
+                  className="text-xs text-accent hover:underline"
+                  onClick={() =>
+                    setEditingChallenge((p) => ({
+                      ...p,
+                      testCases: [...(p.testCases || []), emptyTestCase()],
+                    }))
+                  }
+                >
+                  + Add Case
+                </button>
+              </div>
+              {(editingChallenge.testCases || []).length === 0 ? (
+                <p className="text-[11px] text-secondary">No test cases — click Add Case.</p>
+              ) : (
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {(editingChallenge.testCases || []).map((tc, i) => (
+                    <div
+                      key={i}
+                      className="grid grid-cols-[1fr_2fr_1fr_auto] gap-2 items-start bg-black/5 dark:bg-white/5 rounded-xl p-3"
+                    >
+                      <div>
+                        <p className="text-[10px] text-secondary mb-1">Label</p>
+                        <input
+                          className="field-input text-xs py-1"
+                          placeholder="Example 1"
+                          value={tc.label}
+                          onChange={(e) =>
+                            setEditingChallenge((p) => {
+                              const t = [...(p.testCases || [])];
+                              t[i] = { ...t[i], label: e.target.value };
+                              return { ...p, testCases: t };
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-secondary mb-1">Args (JSON array)</p>
+                        <input
+                          className="field-input text-xs py-1 font-mono"
+                          placeholder='[[2,7,11,15], 9]'
+                          value={tc.args}
+                          onChange={(e) =>
+                            setEditingChallenge((p) => {
+                              const t = [...(p.testCases || [])];
+                              t[i] = { ...t[i], args: e.target.value };
+                              return { ...p, testCases: t };
+                            })
+                          }
+                        />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-secondary mb-1">Expected</p>
+                        <input
+                          className="field-input text-xs py-1 font-mono"
+                          placeholder='[0,1]'
+                          value={tc.expected}
+                          onChange={(e) =>
+                            setEditingChallenge((p) => {
+                              const t = [...(p.testCases || [])];
+                              t[i] = { ...t[i], expected: e.target.value };
+                              return { ...p, testCases: t };
+                            })
+                          }
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-5 text-secondary hover:text-red-400 transition-colors"
+                        onClick={() =>
+                          setEditingChallenge((p) => ({
+                            ...p,
+                            testCases: (p.testCases || []).filter((_, j) => j !== i),
+                          }))
+                        }
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <div className="flex justify-end gap-2">
               <button
                 className="btn-secondary"
