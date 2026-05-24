@@ -1,5 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -85,6 +87,8 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
