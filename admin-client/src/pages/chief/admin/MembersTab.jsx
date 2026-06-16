@@ -8,14 +8,12 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../context/useAuth';
 import { canManageClanGlobally } from '../../lib/permissions';
 import toast from 'react-hot-toast';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../../lib/firebase';
 
 import { USE_MOCK } from '../../lib/mockData';
 
 const MembersTab = () => {
   const queryClient = useQueryClient();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, confirmSessionIfNeeded } = useAuth();
   const [search, setSearch] = useState('');
   const [levelFilter, setLevelFilter] = useState('');
   const [clanFilter, setClanFilter] = useState('');
@@ -39,27 +37,10 @@ const MembersTab = () => {
     if (!adminEmail) return;
 
     try {
+      await confirmSessionIfNeeded();
       await addAdminMutation.mutateAsync(adminEmail);
     } catch (err) {
-      const isReauth = err.response?.status === 403 && (err.response?.data?.reauthRequired || err.response?.data?.error?.includes('Re-authentication') || err.response?.data?.message?.includes('Re-authentication'));
-      if (isReauth) {
-        if (window.confirm("For security, adding an admin requires you to re-authenticate with Google. Click OK to authenticate now.")) {
-          try {
-            toast.loading("Opening Google sign-in...", { id: 'reauth-admin' });
-            const result = await signInWithPopup(auth, googleProvider);
-            const idToken = await result.user.getIdToken(true);
-            toast.loading("Verifying session...", { id: 'reauth-admin' });
-            await api.post('/api/auth/confirm-session', { idToken });
-            toast.success("Re-authenticated! Retrying admin promotion...", { id: 'reauth-admin' });
-            
-            // Retry the operation
-            await addAdminMutation.mutateAsync(adminEmail);
-          } catch (reauthErr) {
-            console.error("Re-authentication failed", reauthErr);
-            toast.error(reauthErr?.response?.data?.message || reauthErr?.message || "Re-authentication failed", { id: 'reauth-admin' });
-          }
-        }
-      } else {
+      if (err.message !== 'User cancelled re-authentication') {
         toast.error(err.response?.data?.message || "Failed to grant admin access");
       }
     }
@@ -126,27 +107,10 @@ const MembersTab = () => {
     }
 
     try {
+      await confirmSessionIfNeeded();
       await updateRoleMutation.mutateAsync({ userId: targetUser._id, role });
     } catch (err) {
-      const isReauth = err.response?.status === 403 && (err.response?.data?.reauthRequired || err.response?.data?.error?.includes('Re-authentication') || err.response?.data?.message?.includes('Re-authentication'));
-      if (isReauth) {
-        if (window.confirm("For security, role changes require you to re-authenticate with Google. Click OK to authenticate now.")) {
-          try {
-            toast.loading("Opening Google sign-in...", { id: 'reauth' });
-            const result = await signInWithPopup(auth, googleProvider);
-            const idToken = await result.user.getIdToken(true);
-            toast.loading("Verifying session...", { id: 'reauth' });
-            await api.post('/api/auth/confirm-session', { idToken });
-            toast.success("Re-authenticated! Retrying role change...", { id: 'reauth' });
-            
-            // Retry the operation
-            await updateRoleMutation.mutateAsync({ userId: targetUser._id, role });
-          } catch (reauthErr) {
-            console.error("Re-authentication failed", reauthErr);
-            toast.error(reauthErr?.response?.data?.message || reauthErr?.message || "Re-authentication failed", { id: 'reauth' });
-          }
-        }
-      } else {
+      if (err.message !== 'User cancelled re-authentication') {
         toast.error(err.response?.data?.message || "Failed to update role");
       }
     }
@@ -155,7 +119,9 @@ const MembersTab = () => {
   // Filter users
   const filteredUsers = (usersQuery.data || []).filter(u => {
     const s = search.toLowerCase();
-    const matchSearch = u.username.toLowerCase().includes(s) || (u.regNo && u.regNo.toLowerCase().includes(s));
+    const matchSearch = (u.username || '').toLowerCase().includes(s) || 
+                        (u.regNo && u.regNo.toLowerCase().includes(s)) ||
+                        (u.email && u.email.toLowerCase().includes(s));
     const matchLevel = levelFilter ? u.codingLevel === levelFilter : true;
     const matchClan = clanFilter ? u.clan?._id === clanFilter || u.clan === clanFilter : true;
     return matchSearch && matchLevel && matchClan;
@@ -264,9 +230,9 @@ const MembersTab = () => {
                     <MemberHoverCard userId={user._id} username={user.username}>
                       <div className="flex items-center gap-3 cursor-pointer">
                         <div className="w-8 h-8 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black transition-colors">
-                          {user.username[0].toUpperCase()}
+                          {(user.username?.[0] || user.email?.[0] || 'U').toUpperCase()}
                         </div>
-                        <span className="transition-colors">{user.username}</span>
+                        <span className="transition-colors">{user.username || user.email || 'Onboarding Pending'}</span>
                       </div>
                     </MemberHoverCard>
                   </td>

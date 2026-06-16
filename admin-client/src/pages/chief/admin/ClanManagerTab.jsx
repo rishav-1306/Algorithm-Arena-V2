@@ -20,7 +20,7 @@ import {
 
 const ClanManagerTab = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, confirmSessionIfNeeded } = useAuth();
   const [assignModal, setAssignModal] = useState({ open: false, user: null });
   const [selectedClanForAssign, setSelectedClanForAssign] = useState('');
   const [viewClanId, setViewClanId] = useState(null);
@@ -191,6 +191,22 @@ const ClanManagerTab = () => {
     const canRestoreCurrentClan = canRestoreClan(user, clan);
     const canDeleteCurrentClan = canDeleteClan(user, clan);
     const canManageMembers = canManageClanMembers(user, clan);
+
+    const handleDemote = async (member) => {
+      if (!canManageMembers) return;
+      if (!window.confirm(`Demote ${member.username} to regular member?`)) {
+        return;
+      }
+      try {
+        await confirmSessionIfNeeded();
+        await updateRoleMutation.mutateAsync({ userId: member._id, role: 'member' });
+      } catch (err) {
+        if (err.message !== 'User cancelled re-authentication') {
+          toast.error(err.response?.data?.message || "Failed to update role");
+        }
+      }
+    };
+
     return (
       <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
         <button onClick={() => setViewClanId(null)} className="flex items-center gap-2 text-tertiary hover:text-primary transition-colors text-sm font-bold bg-white/5 px-4 py-2 rounded-xl w-fit">
@@ -342,12 +358,12 @@ const ClanManagerTab = () => {
                       <tr key={member._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors">
                         <td className="p-4 flex items-center gap-3">
                           <div className="w-8 h-8 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">
-                            {member.username[0].toUpperCase()}
+                            {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
                           </div>
                           <div>
                             <p className="font-bold text-sm text-primary flex items-center gap-2">
                               <MemberHoverCard userId={member._id} username={member.username}>
-                                <span className="hover:text-accent transition-colors cursor-pointer">{member.username}</span>
+                                <span className="hover:text-accent transition-colors cursor-pointer">{member.username || member.email || 'Onboarding Pending'}</span>
                               </MemberHoverCard>
                               {clan.chief?._id === member._id && <FiAward className="text-yellow-400" title="Clan Chief" />}
                             </p>
@@ -381,12 +397,7 @@ const ClanManagerTab = () => {
                             </button>
                           ) : (
                             <button 
-                              onClick={() => {
-                                if (!canManageMembers) return;
-                                if (window.confirm(`Demote ${member.username} to regular member?`)) {
-                                  updateRoleMutation.mutate({ userId: member._id, role: 'member' });
-                                }
-                              }}
+                              onClick={() => handleDemote(member)}
                               disabled={!canManageMembers}
                               className="p-2 rounded-lg bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
                               title="Demote to Member"
@@ -496,9 +507,9 @@ const ClanManagerTab = () => {
                 {unassignedQuery.data?.map(user => (
                   <tr key={user._id} className="border-b border-white/[0.02] hover:bg-white/[0.01] transition-colors">
                     <td className="p-4 font-bold text-sm text-primary flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">{user.username[0].toUpperCase()}</div>
+                      <div className="w-8 h-8 rounded-full bg-accent/20 text-accent flex items-center justify-center font-black">{(user.username?.[0] || user.email?.[0] || 'U').toUpperCase()}</div>
                       <MemberHoverCard userId={user._id} username={user.username}>
-                        <span className="hover:text-accent transition-colors cursor-pointer">{user.username}</span>
+                        <span className="hover:text-accent transition-colors cursor-pointer">{user.username || user.email || 'Onboarding Pending'}</span>
                       </MemberHoverCard>
                     </td>
                     <td className="p-4 text-sm text-secondary font-mono">{user.regNo || 'N/A'}</td>
