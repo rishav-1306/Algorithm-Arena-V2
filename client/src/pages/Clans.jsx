@@ -46,9 +46,9 @@ const StatCard = ({ icon, label, value, color }) => {
   );
 };
 
-/* ─── Clan Dashboard (when user IS in a clan) ─────────────── */
+/* ─── Clan Dashboard ─────────────── */
 
-const ClanDashboard = ({ clan, userId, onLeave }) => {
+const ClanDashboard = ({ clan, userId, onLeave, onBrowseOthers, readOnly, onBack }) => {
   const members = clan.members || [];
   // eslint-disable-next-line no-unused-vars
   const requests = clan.requests || [];
@@ -65,8 +65,13 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
         <div className="relative z-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
+              {onBack && (
+                 <button onClick={onBack} className="mb-4 flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 text-secondary hover:text-primary transition-all text-xs font-semibold w-max">
+                    <FiLogOut className="rotate-180" size={12} /> Back
+                 </button>
+              )}
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-2 block">
-                Your Clan
+                {readOnly ? 'Clan Preview' : 'Your Clan'}
               </span>
               <h2 className="text-3xl md:text-5xl font-black text-primary leading-tight">
                 {clan.name}
@@ -83,13 +88,15 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={onLeave}
-                disabled={isArchived}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-semibold disabled:opacity-50 disabled:hover:bg-transparent"
-              >
-                <FiLogOut size={14} /> {isArchived ? 'Archived' : 'Leave Clan'}
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={onLeave}
+                  disabled={isArchived}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all text-sm font-semibold disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <FiLogOut size={14} /> {isArchived ? 'Archived' : 'Leave Clan'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -171,11 +178,12 @@ const ClanDashboard = ({ clan, userId, onLeave }) => {
   );
 };
 
-/* ─── Clan Browser (when user is NOT in a clan) ───────────── */
-const ClanBrowser = ({ clans, loading, userId, onApply }) => {
+/* ─── Clan Browser ───────────── */
+const ClanBrowser = ({ clans, loading, userId, onApply, onViewClan, userHasClan, onBack }) => {
   const [search, setSearch] = useState('');
 
   const filtered = clans.filter((c) => {
+    if (userHasClan && (c.members || []).some(m => m._id === userId)) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return c.name.toLowerCase().includes(q) || c.tag.toLowerCase().includes(q);
@@ -186,16 +194,23 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="macos-glass p-8 md:p-10 border-accent/20 bg-gradient-to-br from-purple-500/10 via-transparent to-accent/10"
+        className="macos-glass p-8 md:p-10 border-accent/20 bg-gradient-to-br from-purple-500/10 via-transparent to-accent/10 relative"
       >
+        {onBack && (
+          <button onClick={onBack} className="absolute top-6 right-6 btn-secondary text-xs flex items-center gap-2">
+            <FiLogOut className="rotate-180" size={12} /> Back to My Clan
+          </button>
+        )}
         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-2 block">
-          Find Your Tribe
+          {userHasClan ? "Explore" : "Find Your Tribe"}
         </span>
         <h2 className="text-2xl md:text-4xl font-black text-primary mb-2">
-          Join a Clan
+          {userHasClan ? "Other Clans" : "Join a Clan"}
         </h2>
         <p className="text-secondary text-sm max-w-lg">
-          Clans let you team up, compete together, and climb the leaderboards as a unit. Apply to join — once the chief approves, you're in!
+          {userHasClan 
+            ? "Browse other clans in the arena to see their rosters and stats." 
+            : "Clans let you team up, compete together, and climb the leaderboards as a unit. Apply to join — once the chief approves, you're in!"}
         </p>
       </motion.div>
 
@@ -254,17 +269,32 @@ const ClanBrowser = ({ clans, loading, userId, onApply }) => {
                     </span>
                   </div>
 
-                  {isMember ? (
-                    <div className="flex items-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg">
+                  {userHasClan ? (
+                     <button
+                       onClick={() => onViewClan(clan)}
+                       className="btn-secondary w-full text-sm mt-auto flex items-center justify-center gap-2"
+                     >
+                       <FiSearch size={14} /> View Clan
+                     </button>
+                  ) : isMember ? (
+                    <div className="flex items-center gap-2 text-green-400 text-xs font-bold bg-green-500/10 px-3 py-2 rounded-lg mt-auto">
                       <FiCheckCircle size={14} /> Already a member
                     </div>
                   ) : (
-                    <button
-                      onClick={() => onApply(clan._id)}
-                      className="btn-primary w-full text-sm"
-                    >
-                      Apply to Join
-                    </button>
+                    <div className="flex gap-2 mt-auto">
+                      <button
+                        onClick={() => onViewClan(clan)}
+                        className="btn-secondary flex-1 text-sm flex items-center justify-center gap-2"
+                      >
+                        <FiSearch size={14} /> Preview
+                      </button>
+                      <button
+                        onClick={() => onApply(clan._id)}
+                        className="btn-primary flex-1 text-sm"
+                      >
+                        Apply
+                      </button>
+                    </div>
                   )}
                 </Card>
               </motion.div>
@@ -286,6 +316,8 @@ const Clans = () => {
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [removeTarget, setRemoveTarget] = useState(null);
   const [leaving, setLeaving] = useState(false);
+  const [viewingOtherClan, setViewingOtherClan] = useState(null);
+  const [isBrowsingOthers, setIsBrowsingOthers] = useState(false);
 
   const myClanQuery = useQuery({
     queryKey: ['my-clan'],
@@ -414,10 +446,50 @@ const Clans = () => {
         subtitle={myClan ? (myClan.status === 'archived' ? `Your clan ${myClan.name} is archived and read only.` : `You are a member of ${myClan.name}`) : 'Find your tribe and compete together.'}
         showBack={true}
         backUrl="/dashboard"
+        actions={
+          myClan && !isBrowsingOthers && !viewingOtherClan && (
+            <button
+              onClick={() => setIsBrowsingOthers(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-accent/30 text-accent hover:bg-accent/10 transition-all text-sm font-semibold"
+            >
+              <FiSearch size={14} /> Browse Other Clans
+            </button>
+          )
+        }
       />
 
       <AnimatePresence mode="wait">
-        {myClan ? (
+        {viewingOtherClan ? (
+          <MotionDiv
+            key="preview"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ClanDashboard
+              clan={viewingOtherClan}
+              userId={user?.id}
+              readOnly={true}
+              onBack={() => setViewingOtherClan(null)}
+            />
+          </MotionDiv>
+        ) : isBrowsingOthers ? (
+          <MotionDiv
+            key="browser-others"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ClanBrowser
+              clans={clansQuery.data || []}
+              loading={clansQuery.isLoading}
+              userId={user?.id}
+              userHasClan={true}
+              onViewClan={(clan) => setViewingOtherClan(clan)}
+              onBack={() => setIsBrowsingOthers(false)}
+            />
+          </MotionDiv>
+        ) : myClan ? (
           <MotionDiv
             key="dashboard"
             initial={{ opacity: 0 }}
@@ -428,6 +500,7 @@ const Clans = () => {
               clan={myClan}
               userId={user?.id}
               onLeave={() => setShowLeaveConfirm(true)}
+              onBrowseOthers={() => setIsBrowsingOthers(true)}
             />
           </MotionDiv>
         ) : (
@@ -442,6 +515,7 @@ const Clans = () => {
               loading={clansQuery.isLoading}
               userId={user?.id}
               onApply={handleApply}
+              onViewClan={(clan) => setViewingOtherClan(clan)}
             />
           </MotionDiv>
         )}
@@ -469,3 +543,4 @@ const Clans = () => {
 };
 
 export default Clans;
+

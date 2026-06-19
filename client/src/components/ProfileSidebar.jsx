@@ -522,7 +522,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                   <FiAward className="text-yellow-400 text-xl" />
                   <div>
                     <h3 className="font-black text-sm uppercase tracking-wider text-black dark:text-white">All Achievements</h3>
-                    <p className="text-[10px] text-slate-400 font-mono">
+                    <p className="text-[10px] text-black dark:text-slate-400 font-mono">
                       {sortedBadges.filter(b => b.isUnlocked).length} achieved of {sortedBadges.length} total
                     </p>
                   </div>
@@ -665,7 +665,7 @@ const ProfileSidebar = ({ user, summary, profile, badges }) => {
                                 {badge.rarity}
                               </span>
                             </div>
-                            <p className="text-xs text-slate-400 line-clamp-2 leading-tight">
+                            <p className="text-xs text-black dark:text-slate-400 line-clamp-2 leading-tight">
                               {badge.description || "No description provided."}
                             </p>
                           </div>
