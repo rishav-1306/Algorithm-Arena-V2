@@ -300,7 +300,7 @@ const Dashboard = () => {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="p-4 rounded-xl border border-white/[0.08] hover:border-accent/40 transition-all
+                  className="p-4 rounded-xl border border-black/20 dark:border-white/10 hover:border-accent/40 transition-all
                     hover:shadow-[0_0_20px_rgba(var(--accent-rgb),0.15)]"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">

@@ -13,7 +13,7 @@ const getRelativeTime = (date) => {
   const diff = new Date(date) - now;
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  
+
   if (days > 0) return `${days}d ${hours}h left`;
   if (hours > 0) return `${hours}h left`;
   return 'Due soon';
@@ -57,9 +57,9 @@ const PendingTasks = () => {
       />
 
       {tasks.length === 0 ? (
-        <EmptyState 
-          title="All caught up!" 
-          description="No pending missions for now. Check back later or explore the Missions archive." 
+        <EmptyState
+          title="All caught up!"
+          description="No pending missions for now. Check back later or explore the Missions archive."
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -76,7 +76,7 @@ const PendingTasks = () => {
                 <span className="text-xs text-tertiary uppercase font-black tracking-widest">{task.category}</span>
                 <div className="flex flex-col items-end gap-1">
                   <span className={`text-[10px] px-2 py-1 rounded uppercase font-black ${
-                    task.priority === 'High' ? 'bg-red-500/20 text-red-500' : 
+                    task.priority === 'High' ? 'bg-red-500/20 text-red-500' :
                     task.priority === 'Med' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-blue-500/20 text-blue-400'
                   }`}>
                     {task.priority} Priority
@@ -89,7 +89,7 @@ const PendingTasks = () => {
                 </div>
               </div>
               <h3 className="font-bold text-xl leading-tight group-hover:text-accent transition-colors mb-6">{task.title}</h3>
-              
+
               <div className="w-full bg-white/5 h-1.5 rounded-full mb-6 overflow-hidden">
                 <div className={`h-full ${task.isRejected ? 'bg-red-500 w-[10%]' : 'bg-accent w-[30%]'}`}></div>
               </div>

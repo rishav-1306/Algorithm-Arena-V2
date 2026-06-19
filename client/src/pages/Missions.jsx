@@ -70,7 +70,7 @@ const Missions = () => {
     navigate('/missions', { replace: true });
     setFilters(prev => ({ ...prev, setId: '' }));
   };
-  
+
   const submissionsQuery = useQuery({
     queryKey: ['my-submissions'],
     queryFn: async () => {
@@ -372,7 +372,7 @@ const Missions = () => {
               </div>
             </div>
           )}
-          
+
           <div className="segmented flex items-center">
             <button
               className={`segmented-btn ${viewMode === "grid" ? "active" : ""}`}
@@ -450,7 +450,7 @@ const Missions = () => {
                               }`}>
                                 {challenge.difficulty}
                               </span>
-                              
+
                               <div className="flex items-center gap-2">
                                 {subsMap[challenge._id] === 'Accepted' && (
                                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/10 text-green-400 border border-green-500/20">Approved</span>

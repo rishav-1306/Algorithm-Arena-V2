@@ -1,4 +1,5 @@
 import React from 'react';
+import PixelBlast from './PixelBlast';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -17,8 +18,22 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-app text-primary flex items-center justify-center p-6">
-          <div className="macos-glass max-w-md p-8 text-center">
+        <div className="min-h-screen bg-app text-primary flex items-center justify-center p-6 relative overflow-hidden">
+          {/* Background Pixel Blast */}
+          <div className="fixed inset-0 z-0 opacity-60 pointer-events-none">
+            <PixelBlast
+              variant="square"
+              pixelSize={8}
+              color="#ef4444"
+              patternScale={3}
+              patternDensity={1.6}
+              pixelSizeJitter={0.15}
+              noiseAmount={0.06}
+              transparent={true}
+            />
+          </div>
+
+          <div className="macos-glass max-w-md p-8 text-center relative z-10">
             <h1 className="text-2xl font-bold mb-3">Unexpected Error</h1>
             <p className="text-secondary mb-6">
               Something went wrong while rendering this page. Please refresh and try again.
