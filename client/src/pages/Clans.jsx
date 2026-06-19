@@ -76,13 +76,13 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
               <span className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-2 block">
                 {readOnly ? 'Clan Preview' : 'Your Clan'}
               </span>
-              <h2 className="text-3xl md:text-5xl font-black text-primary leading-tight">
+              <h1 className="text-3xl md:text-5xl font-black text-primary leading-tight">
                 {clan.name}
-                <span className="ml-3 text-lg font-mono text-accent/70">[{clan.tag}]</span>
-                <span className={`ml-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest ${isArchived ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
+                <span className="ml-3 text-lg font-mono text-amber-400">[{clan.tag}]</span>
+                <h2 className={`ml-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-black uppercase tracking-widest ${isArchived ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/15 text-emerald-300'}`}>
                   {isArchived ? 'Archived' : 'Active'}
-                </span>
-              </h2>
+                </h2>
+              </h1>
               <p className="text-secondary mt-2 max-w-lg text-sm md:text-base">{clan.description}</p>
               {isArchived && (
                 <p className="mt-3 inline-flex items-center gap-2 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-bold text-amber-200">
@@ -125,12 +125,12 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
               <FiUsers className="text-accent" />
               Roster
               <span className="text-xs bg-accent/10 px-2 py-0.5 rounded-full text-accent font-black">{members.length}</span>
-              <div className="ml-auto flex bg-white/5 border border-white/10 rounded-lg p-1">
+              <div className="ml-auto flex bg-white/5 border border-white/10 dark:border-white/20 rounded-lg p-1">
                 <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiGrid size={14}/></button>
                 <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-accent text-white shadow-lg' : 'text-secondary hover:text-primary'}`}><FiList size={14}/></button>
               </div>
             </h3>
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-3" : "flex flex-col gap-2"}>
+            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 gap-2" : "flex flex-col gap-2"}>
               {members.map((member, i) => {
                 const isMemberChief = clan.chief?._id === member._id;
                 return (
@@ -139,7 +139,7 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.04 }}
-                    className="flex items-center justify-between p-4 rounded-xl border border-glass-border/40 hover:border-accent/30 transition-all group"
+                    className="flex items-center justify-between p-4 rounded-xl border border-black/20  dark:border-white/20 hover:border-accent/30 transition-all group"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent">
@@ -219,8 +219,8 @@ const ClanBrowser = ({ clans, loading, userId, onApply, onViewClan, userHasClan,
           {userHasClan ? "Other Clans" : "Join a Clan"}
         </h2>
         <p className="text-secondary text-sm max-w-lg">
-          {userHasClan 
-            ? "Browse other clans in the arena to see their rosters and stats." 
+          {userHasClan
+            ? "Browse other clans in the arena to see their rosters and stats."
             : "Clans let you team up, compete together, and climb the leaderboards as a unit. Apply to join — once the chief approves, you're in!"}
         </p>
       </motion.div>
@@ -469,7 +469,7 @@ const Clans = () => {
           myClan && !isBrowsingOthers && !viewingOtherClan && (
             <button
               onClick={() => setIsBrowsingOthers(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-accent/30 text-accent hover:bg-accent/10 transition-all text-sm font-semibold"
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-black/20 dark:border-white/20 text-accent hover:bg-accent/10 transition-all text-sm font-semibold"
             >
               <FiSearch size={14} /> Browse Other Clans
             </button>

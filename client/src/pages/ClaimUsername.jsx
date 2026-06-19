@@ -7,7 +7,6 @@ import PixelBlast from '../components/PixelBlast';
 import { api } from '../lib/api';
 import { useAuth } from '../context/useAuth';
 import Logo from '../components/Logo';
-
 const USERNAME_REGEX = /^[a-zA-Z0-9_]+$/;
 const REGNO_REGEX = /^[a-zA-Z0-9]{6,20}$/;
 
@@ -121,7 +120,7 @@ const ClaimUsername = () => {
         year,
         section: section.trim(),
       });
-      
+
       updateUser({
         username,
         name: name.trim(),
@@ -160,7 +159,7 @@ const ClaimUsername = () => {
   };
 
   const usernameStatusMessage = () => {
-    if (usernameError) return <span className="text-amber-400 text-xs">{usernameError}</span>;
+    if (usernameError) return <span className="text-red-600 text-xs">{usernameError}</span>;
     switch (availability) {
       case 'checking':
         return <span className="text-secondary text-xs">Checking availability...</span>;
@@ -188,9 +187,6 @@ const ClaimUsername = () => {
           rippleThickness={0.12}
           rippleIntensityScale={1.5}
           liquid={false}
-          liquidStrength={0.12}
-          liquidRadius={1.2}
-          liquidWobbleSpeed={5}
           speed={0.5}
           edgeFade={0.25}
           transparent
@@ -198,36 +194,33 @@ const ClaimUsername = () => {
       </div>
 
       <div className="w-full max-w-2xl relative z-10 my-auto py-8">
-        <Card className="shadow-2xl shadow-black/10 dark:shadow-black/50" hover={true} variant="glass">
-          <div className="text-center mb-8">
-            <div className="flex flex-col items-center gap-3 mb-5">
-              <Logo variant="hybrid" size="w-28 h-14" imgClassName="object-cover" />
-            </div>
-            <h2 className="text-2xl font-black text-primary mb-1 tracking-tight">Setup Your Pilot Profile</h2>
-            <p className="text-sm text-secondary">
-              Initialize your credentials to enter the Algorithm Arena. All details are required.
-            </p>
+        <Card className="shadow-2xl shadow-black/10 dark:shadow-black/50" hover={false} variant="glass">
+          {/* Header */}
+          <div className="text-center justify-center mb-7">
+<Logo className="justify-center mx-auto" variant="arena" size="sm" showText="true" />
+            <h2 className="text-2xl my-4 font-black text-primary tracking-tight">Complete Your Profile</h2>
+            <p className="text-sm text-secondary mt-1">This information is used for academic tracking and rankings.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {error && (
               <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
                 {error}
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {/* Username field */}
-              <div className="space-y-2 col-span-2">
-                <label className="field-label">Codename / Username</label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Username */}
+              <div className="space-y-1.5 col-span-2">
+                <label className="field-label">Username</label>
                 <div className="relative group">
                   <FiUser className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value.trim())}
-                    className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-12 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-12 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-tertiary"
                     placeholder="e.g. Neo_42"
                     maxLength={30}
                   />
@@ -241,7 +234,7 @@ const ClaimUsername = () => {
               </div>
 
               {/* Full Name */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="field-label">Full Name</label>
                 <div className="relative group">
                   <FiFileText className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
@@ -249,7 +242,7 @@ const ClaimUsername = () => {
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-tertiary"
                     placeholder="e.g. John Doe"
                     maxLength={100}
                   />
@@ -257,7 +250,7 @@ const ClaimUsername = () => {
               </div>
 
               {/* Registration Number */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="field-label">Registration Number</label>
                 <div className="relative group">
                   <FiHash className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
@@ -265,25 +258,25 @@ const ClaimUsername = () => {
                     type="text"
                     value={regNo}
                     onChange={(e) => setRegNo(e.target.value.trim().toUpperCase())}
-                    className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400 font-mono"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-tertiary font-mono"
                     placeholder="e.g. 231010XXXX"
                     maxLength={20}
                   />
                 </div>
                 <div className="h-4 pl-1">
-                  {regNoError && <span className="text-amber-400 text-xs">{regNoError}</span>}
+                  {regNoError && <span className="text-red-600 text-xs">{regNoError}</span>}
                 </div>
               </div>
 
               {/* Branch */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="field-label">Branch</label>
                 <div className="relative group">
                   <FiBookOpen className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors z-10" />
                   <select
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
-                    className="w-full bg-white/50 dark:bg-[#111115] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
                   >
                     <option value="">Select Branch</option>
                     <option value="B.Tech CSE">B.Tech CSE</option>
@@ -295,14 +288,14 @@ const ClaimUsername = () => {
               </div>
 
               {/* Year */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <label className="field-label">Academic Year</label>
                 <div className="relative group">
                   <FiClock className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors z-10" />
                   <select
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    className="w-full bg-white/50 dark:bg-[#111115] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all appearance-none"
                   >
                     <option value="">Select Year</option>
                     <option value="First Year">First Year</option>
@@ -314,7 +307,7 @@ const ClaimUsername = () => {
               </div>
 
               {/* Section */}
-              <div className="space-y-2 col-span-1 md:col-span-2">
+              <div className="space-y-1.5 col-span-1 md:col-span-2">
                 <label className="field-label">Section</label>
                 <div className="relative group">
                   <FiGrid className="absolute left-4 top-3.5 text-secondary group-focus-within:text-accent transition-colors" />
@@ -322,7 +315,7 @@ const ClaimUsername = () => {
                     type="text"
                     value={section}
                     onChange={(e) => setSection(e.target.value.trim().toUpperCase())}
-                    className="w-full bg-white/50 dark:bg-black/20 border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-gray-400 font-mono"
+                    className="w-full bg-white/80 dark:bg-white/[0.06] border border-glass-border rounded-xl py-3 pl-11 pr-4 text-primary outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all placeholder:text-tertiary font-mono"
                     placeholder="e.g. 24E1B3"
                     maxLength={20}
                   />
@@ -333,26 +326,20 @@ const ClaimUsername = () => {
             <button
               type="submit"
               disabled={!isFormValid}
-              className="w-full py-4 mt-4 rounded-xl bg-accent hover:bg-accent-glow text-white font-bold transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed text-base"
+              className="w-full py-3.5 mt-2 rounded-xl bg-accent hover:bg-accent-glow text-white font-bold transition-all shadow-lg shadow-accent/25 hover:shadow-accent/40 active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Entering Arena...
+                  Setting up...
                 </>
               ) : (
                 <>
-                  Complete Onboarding & Start <FiArrowRight />
+                  Enter the Arena <FiArrowRight />
                 </>
               )}
             </button>
           </form>
-
-          <div className="mt-6 text-center pt-6 border-t border-glass-border">
-            <p className="text-xs text-tertiary leading-relaxed">
-              These details are required for academic tracking and rankings. Social links can be filled in later inside your profile settings.
-            </p>
-          </div>
         </Card>
       </div>
 

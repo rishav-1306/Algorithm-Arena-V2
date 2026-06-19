@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FiArrowRight } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
@@ -120,21 +119,17 @@ const Login = ({ onLoginSuccess }) => {
 
       <div className="w-full max-w-md relative z-10 my-auto py-8">
         <Card className="shadow-2xl shadow-black/10 dark:shadow-black/50">
-          <div className="text-center mb-8">
-            {/* GDG Branding */}
-            <div className="flex flex-col items-center gap-3 mb-5">
-              <Logo variant="hybrid" size="w-28 h-14" imgClassName="object-cover" />
-            </div>
-            <Link to="/" className="inline-flex items-center justify-center gap-2 group mb-2">
+          <div className="text-center mb-6">
+            <Link to="/" className="inline-flex items-center justify-center gap-2 group mb-3">
               <Logo variant="arena" size="sm" showText={true} />
             </Link>
-            <h2 className="text-sm font-medium text-secondary">Welcome back, Pilot.</h2>
+            <p className="text-xs text-tertiary uppercase tracking-widest font-bold">Competitor Login</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {error && (
               <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
                 {error}
               </div>
             )}
@@ -162,29 +157,14 @@ const Login = ({ onLoginSuccess }) => {
               )}
             </button>
 
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-glass-border"></div>
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="px-4 bg-card text-tertiary">Secured by Firebase</span>
-              </div>
-            </div>
-
             <p className="text-center text-xs text-tertiary leading-relaxed">
-              By signing in, you agree to join the Algorithm Arena community.
-              Your Google profile will be used to create your account.
+              New or returning — <span className="text-accent font-medium">one click gets you in.</span>
+              <br />
+              Your Google profile is used to create your account.
             </p>
           </div>
 
-          <div className="mt-6 text-center pt-6 border-t border-glass-border">
-            <p className="text-sm text-secondary">
-              New here? Just click the button above — {' '}
-              <span className="font-semibold text-accent">
-                we'll set up your profile next <FiArrowRight className="inline" />
-              </span>
-            </p>
-          </div>
+
         </Card>
       </div>
 
