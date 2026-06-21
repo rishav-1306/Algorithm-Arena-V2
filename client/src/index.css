@@ -32,7 +32,7 @@
     --font-h1: "Michroma", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
     /* [H2] Subheadings / Section Titles (Try: "Orbitron", "Michroma", "Outfit", "Space Grotesk", "Montserrat") */
-    --font-h2: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --font-h:2 "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
     /* [BODY] Paragraphs, Cards, Inputs, General Text (Try: "Inter", "Plus Jakarta Sans", "Montserrat") */
     --font-body: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -102,7 +102,7 @@
     --card-shadow-opacity: 0.5;
     --card-glow-opacity: 0.3;
     --fg-secondary: #94a3b8;
-    --fg-tertiary: #475569;
+    --fg-tertiary: #63667e;
     --accent-primary: #6366f1;
     --accent-rgb: 99, 102, 241;
     --accent-glow: rgba(99, 102, 241, 0.4);

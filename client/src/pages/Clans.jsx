@@ -142,8 +142,12 @@ const ClanDashboard = ({ clan, userId, onLeave, readOnly, onBack }) => {
                     className="flex items-center justify-between p-4 rounded-xl border border-black/20  dark:border-white/20 hover:border-accent/30 transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent">
-                        {(member.username?.[0] || member.email?.[0] || 'U').toUpperCase()}
+                      <div className="w-10 h-10 rounded-xl bg-glass-surface flex items-center justify-center font-bold text-accent overflow-hidden">
+                        {member.profilePicture ? (
+                          <img src={member.profilePicture} referrerPolicy="no-referrer" alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          (member.username?.[0] || member.email?.[0] || 'U').toUpperCase()
+                        )}
                       </div>
                       <div>
                         <p className="font-bold text-primary flex items-center gap-2">

@@ -68,7 +68,7 @@ const Podium = ({ items, leaderType }) => {
                   />
                 ) : (
                   <span className="text-2xl font-black text-primary md:text-3xl">
-                    {(item.username || item.name || "?")[0]}
+                    {(item.username || item.name || "?")[0].toUpperCase()}
                   </span>
                 )}
               </div>
@@ -379,7 +379,7 @@ const Leaderboard = () => {
                                   className="h-full w-full object-cover"
                                 />
                               ) : (
-                                (item.username || item.name || "?")[0]
+                                (item.username || item.name || "?")[0].toUpperCase()
                               )}
                             </div>
                             <div>

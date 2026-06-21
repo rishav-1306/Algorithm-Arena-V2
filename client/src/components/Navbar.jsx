@@ -88,7 +88,7 @@ const Navbar = ({ onLogout }) => {
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="hidden md:flex items-center gap-3 group focus:outline-none py-1 px-2 rounded-2xl hover:bg-white/5 transition-all"
                  >
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-purple-600 p-0.5 transition-all group-hover:scale-105 shadow-lg shadow-accent/20">
+                  <div className="w-10 h-10 rounded-xl p-0.5 transition-all group-hover:scale-105 shadow-lg shadow-accent/20 border border-black/20 dark:border-white/20">
                     {user?.profilePicture ? (
                       <img src={user.profilePicture} alt="Avatar" referrerPolicy="no-referrer" className="w-full h-full rounded-[9px] object-cover" />
                     ) : (
